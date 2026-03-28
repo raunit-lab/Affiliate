@@ -9,6 +9,29 @@ import { serverEndpoint } from '../../config/config';
 import { usePermission } from '../../rbac/userPermissions';
 import { useNavigate } from 'react-router-dom';
 
+const CopyButton = ({ shareURL }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(shareURL);
+    setCopied(true);
+    
+    setTimeout(() => {
+      setCopied(false);
+    }, 2000);
+  };
+
+  return (
+    <button 
+      className={`btn btn-sm ${copied ? 'bg-green-500 text-white border-green-500 hover:bg-green-600' : 'btn-outline-primary'}`}
+      onClick={handleCopy}
+      disabled={copied} // Prevent spam clicking
+    >
+      {copied ? 'Copied!' : 'Copy'}
+    </button>
+  );
+};
+
 function LinksDashboard() {
   const [errors, setErrors] = useState({});
   const [linksData, setLinksData] = useState([]);
@@ -91,6 +114,8 @@ function LinksDashboard() {
     if (!formData.originalUrl.trim()) {
       newErrors.originalUrl = "URL is mandatory";
       isValid = false;
+    } else if (!formData.originalUrl.match(/^https?:\/\//i)) {
+      formData.originalUrl = 'https://' + formData.originalUrl; 
     }
     if (!formData.category.trim()) {
       newErrors.category = "Category is mandatory";
@@ -213,16 +238,7 @@ function LinksDashboard() {
       flex: 1.5,
       renderCell: (params) => {
         const shareURL = `${serverEndpoint}/links/r/${params.row._id}`;
-        return(
-          <button className='btn btn-outline-primary btn-sm'
-            // 3. Fix Unused 'e' & Clipboard typo
-            onClick={() => {
-              navigator.clipboard.writeText(shareURL);
-            }}
-          >
-            Copy
-          </button>
-        )
+                return <CopyButton shareURL={shareURL} />;
       }
     },
   ];
