@@ -3,7 +3,7 @@ import { DataGrid } from '@mui/x-data-grid';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AssessmentIcon from '@mui/icons-material/Assessment';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react'; // Added useCallback
 import axios from 'axios';
 import { serverEndpoint } from '../../config/config';
 import { usePermission } from '../../rbac/userPermissions';
@@ -21,12 +21,12 @@ function LinksDashboard() {
   const permission = usePermission();
 
   const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0); // Better to initialize page 0
   const [pageSize, setPageSize] = useState(2);
   const [searchQuery, setSearchQuery] = useState('');
   const [totalRecords, setTotalRecords]  = useState(0);
   const [sortModel, setSortModel] = useState([
-    {field: 'currentedAt', sort: 'desc' }
+    { field: 'createdAt', sort: 'desc' } // Fixed typo: was 'currentedAt'
   ]);
 
   const [formData, setFormData] = useState({
@@ -51,7 +51,7 @@ function LinksDashboard() {
       handleCloseDeleteModal();
     } catch (error) {
       console.error("Delete Link Error:", error); 
-      setErrors({ message: error.response?.data?.message || 'Unable to delete the link, please try again' }); // More specific error message
+      setErrors({ message: error.response?.data?.message || 'Unable to delete the link, please try again' });
     }
   };
 
@@ -122,12 +122,13 @@ function LinksDashboard() {
         handleCloseModal();
       } catch (error) {
         console.error("Submit Link Error:", error);
-        setErrors({ message: error.response?.data?.message || 'Unable to add/update the link, please try again' }); // More specific error message
+        setErrors({ message: error.response?.data?.message || 'Unable to add/update the link, please try again' });
       }
     }
   };
 
-  const fetchLinks = async () => {
+  // 4. Fix useEffect Warning: Wrap in useCallback
+  const fetchLinks = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -143,19 +144,23 @@ function LinksDashboard() {
       };
 
       const res = await axios.get(`${serverEndpoint}/links`, { params: params, withCredentials: true });
-      setLinksData(res.data.data);
-      setTotalRecords(res.data.total);
+      
+      // 1. Fix Missing Links Bug: Access the correct property 'links' instead of 'data'
+      setLinksData(res.data.links || []); 
+      setTotalRecords(res.data.total || 0);
+      
     } catch (error) {
       console.error("Fetch Links Error:", error); 
-      setErrors({ message: error.response?.data?.message || 'Unable to fetch links at the moment. Please try again' }); // More specific error message
-    }finally{
+      setErrors({ message: error.response?.data?.message || 'Unable to fetch links at the moment. Please try again' });
+    } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, pageSize, searchQuery, sortModel]); // Add dependencies here
 
+  // Now useEffect is happy
   useEffect(() => {
     fetchLinks();
-  }, [currentPage, pageSize, searchQuery, sortModel]);
+  }, [fetchLinks]);
 
   const columns = [
     { field: 'campaignTitle', headerName: 'Campaign', flex: 2 },
@@ -210,8 +215,9 @@ function LinksDashboard() {
         const shareURL = `${serverEndpoint}/links/r/${params.row._id}`;
         return(
           <button className='btn btn-outline-primary btn-sm'
-            onClick={(e) => {
-              navigate.clipboard.writeText(shareURL);
+            // 3. Fix Unused 'e' & Clipboard typo
+            onClick={() => {
+              navigator.clipboard.writeText(shareURL);
             }}
           >
             Copy
@@ -253,6 +259,7 @@ function LinksDashboard() {
           getRowId={(row) => row._id}
           rows={linksData}
           columns={columns}
+          loading={loading} // 2. Fix Unused loading: Pass it here so grid shows a spinner!
           initialState={{
             pagination: { paginationModel: { pageSize: pageSize, page: currentPage } }
           }}
@@ -281,7 +288,7 @@ function LinksDashboard() {
 
       {/* Add / Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50"> {/* MODIFIED bg-black/40 and ADDED backdrop-blur-sm */}
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
           <div className="bg-white p-6 rounded-md shadow-lg w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">
@@ -345,7 +352,7 @@ function LinksDashboard() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50"> {/* MODIFIED bg-black/40 and ADDED backdrop-blur-sm */}
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
           <div className="bg-white p-6 rounded-md shadow-lg w-full max-w-sm">
             <h3 className="text-lg font-semibold mb-4">Confirm Delete</h3>
             <p className="mb-6">Are you sure you want to delete the link?</p>

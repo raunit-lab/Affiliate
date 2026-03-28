@@ -1,3 +1,4 @@
+// src/App.jsx
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
@@ -23,33 +24,34 @@ import ResetPassword from "./pages/ResetPassword";
 
 import UnauthorizedAccess from "./components/UnauthorizedAccess";
 import ProtectedRoute from "./rbac/ProtectedRoute";
+import PublicRoute from "./components/PublicRoute";
+import PrivateRoute from "./components/PrivateRoute";
 
 function App() {
   const dispatch = useDispatch();
   const userDetails = useSelector((state) => state.userDetails);
   const [loading, setLoading] = useState(true);
 
-  const isUserLoggedIn = async () => {
-    try {
-      const res = await axios.post(
-        `${serverEndpoint}/auth/is-user-logged-in`,
-        {},
-        { withCredentials: true }
-      );
-      dispatch({
-        type: SET_USER,
-        payload: res.data.user,
-      });
-    } catch (error) {
-      console.error("Auth Check Failed:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const isUserLoggedIn = async () => {
+      try {
+        const res = await axios.post(
+          `${serverEndpoint}/auth/is-user-logged-in`,
+          {},
+          { withCredentials: true }
+        );
+        dispatch({
+          type: SET_USER,
+          payload: res.data.user,
+        });
+      } catch (error) {
+        console.error("Auth Check Failed:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
     isUserLoggedIn();
-  }, []);
+  }, [dispatch]);
 
   if (loading) {
     return (
@@ -61,60 +63,93 @@ function App() {
 
   return (
     <Routes>
+      {/* --- Public Routes --- */}
       <Route
         path="/"
         element={
-          userDetails ? (
-            <UserLayout>
-              <Navigate to="/dashboard" />
-            </UserLayout>
-          ) : (
-            <AppLayout>
-              <Home />
-            </AppLayout>
-          )
+          <PublicRoute>
+            <Home />
+          </PublicRoute>
         }
       />
-
       <Route
         path="/login"
         element={
-          userDetails ? (
-            <Navigate to="/dashboard" />
-          ) : (
-            <AppLayout>
-              <Login />
-            </AppLayout>
-          )
+          <PublicRoute>
+            <Login />
+          </PublicRoute>
         }
       />
-
       <Route
         path="/register"
         element={
-          userDetails ? (
-            <Navigate to="/dashboard" />
-          ) : (
-            <AppLayout>
-              <Register />
-            </AppLayout>
-          )
+          <PublicRoute>
+            <Register />
+          </PublicRoute>
         }
       />
-
       <Route
         path="/forgot-password"
         element={
-          userDetails ? (
-            <Navigate to="/dashboard" />
-          ) : (
-            <AppLayout>
-              <ForgetPassword />
-            </AppLayout>
-          )
+          <PublicRoute>
+            <ForgetPassword />
+          </PublicRoute>
         }
       />
 
+      {/* --- Private Routes --- */}
+      <Route
+        path="/dashboard"
+        element={
+          <PrivateRoute>
+            <Dashboard />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/manage-payments"
+        element={
+          <PrivateRoute>
+            <ManagePayments />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/analytics/:id"
+        element={
+          <PrivateRoute>
+            <AnalyticsDashboard />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/unauthorized-access"
+        element={
+          <PrivateRoute>
+            <UnauthorizedAccess />
+          </PrivateRoute>
+        }
+      />
+
+      {/* Logout doesn't need a layout, just the logic check */}
+      <Route
+        path="/logout"
+        element={userDetails ? <Logout /> : <Navigate to="/login" />}
+      />
+
+      {/* --- Protected Route (Admin Only) --- */}
+      <Route
+        path="/users"
+        element={
+          <PrivateRoute>
+            <ProtectedRoute roles={["admin"]}>
+              <ManageUsers />
+            </ProtectedRoute>
+          </PrivateRoute>
+        }
+      />
+
+      {/* --- Hybrid Routes (Accessible to both, layout changes based on state) --- */}
       <Route
         path="/reset-password"
         element={
@@ -129,19 +164,6 @@ function App() {
           )
         }
       />
-
-      <Route
-        path="/dashboard"
-        element={
-          userDetails ? <UserLayout><Dashboard /></UserLayout> : <Navigate to="/login" />
-        }
-      />
-
-      <Route
-        path="/logout"
-        element={userDetails ? <Logout /> : <Navigate to="/login" />}
-      />
-
       <Route
         path="/error"
         element={
@@ -153,60 +175,6 @@ function App() {
             <AppLayout>
               <Error />
             </AppLayout>
-          )
-        }
-      />
-
-      <Route
-        path="/users"
-        element={
-          userDetails ? (
-            <ProtectedRoute roles={['admin']}>
-              <UserLayout>
-                <ManageUsers />
-              </UserLayout>
-            </ProtectedRoute>
-          ) : (
-            <Navigate to="/login" />
-          )
-        }
-      />
-
-      <Route
-        path="/unauthorized-access"
-        element={
-          userDetails ? (
-            <UserLayout>
-              <UnauthorizedAccess />
-            </UserLayout>
-          ) : (
-            <Navigate to="/login" />
-          )
-        }
-      />
-
-      <Route
-        path="/manage-payments"
-        element={
-          userDetails ? (
-            <UserLayout>
-              <ManagePayments />
-            </UserLayout>
-          ) : (
-            <Navigate to="/login" />
-          )
-        }
-      />
-
-      <Route
-        path="/analytics/:id"
-        element={
-          userDetails ? (
-            <UserLayout>
-              <AnalyticsDashboard />
-            </UserLayout>
-          ) : (
-            <Navigate to="/login" />
           )
         }
       />

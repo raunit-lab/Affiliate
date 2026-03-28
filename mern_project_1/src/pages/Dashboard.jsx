@@ -1,6 +1,7 @@
+// src/pages/Dashboard.jsx
 import LinksDashboard from "./links/LinkDashboard";
 
-function Dashboard({ user }) {
+function Dashboard() { // Removed { user }
   return (
     <LinksDashboard />
   );
