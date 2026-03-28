@@ -1,0 +1,25 @@
+name: Deploy Affiliate App to Self-Hosted Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Sync Code to apps directory
+        run: |
+          rsync -avz --delete ./ /srv/apps/affiliate/
+
+      - name: Build and Restart Docker Containers
+        run: |
+          cd /srv/infra/affiliate
+          docker compose build
+          docker compose up -d --force-recreate
+          docker image prune -f
