@@ -216,6 +216,11 @@ const linksController = {
             if (!linkId) {
                 return response.status(400).json({ error: 'Link ID is required' });
             }
+            const mongoose = require('mongoose');
+            if (!mongoose.Types.ObjectId.isValid(linkId)) {
+                 console.warn(`Invalid Link ID format received: ${linkId}`);
+                 return response.status(404).json({ error: 'Link not found (Invalid ID format)' });
+            }
 
             let link = await Links.findById(linkId);
             if (!link) {
